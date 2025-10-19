@@ -1,0 +1,553 @@
+{
+  "name": "Free Tools Lead Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "free-tools-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Tool Submission Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "free-tools-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "gdpr-consent",
+              "leftValue": "={{ $json.gdpr_consent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "gdpr-check",
+      "name": "GDPR Consent Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "email-validation",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "email-validation",
+      "name": "Email Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.google.com/recaptcha/api/siteverify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "secret",
+              "value": "6LdXOu8rAAAAAH5inDMTaEgDzVeWMMdSZip2Xu8Y"
+            },
+            {
+              "name": "response",
+              "value": "={{ $json.recaptcha_token }}"
+            },
+            {
+              "name": "remoteip",
+              "value": "={{ $json.ip_address }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "recaptcha-verify",
+      "name": "reCAPTCHA Verification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "recaptcha-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "recaptcha-check",
+      "name": "reCAPTCHA Success Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "rateLimit": "={{ $vars.RATE_LIMIT_PER_HOUR }}",
+        "key": "={{ $json.email }}",
+        "windowSize": 3600,
+        "options": {}
+      },
+      "id": "rate-limit",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.rateLimit",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "leads",
+        "columns": "name, email, tool_type, tool_data, gdpr_consent, source, created_at",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "supabase-insert",
+      "name": "Insert Lead to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-credentials",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Emit Mixpanel event for analytics\nconst eventData = {\n  event: 'lead_captured',\n  properties: {\n    tool_type: $input.first().json.tool_type,\n    source: $input.first().json.source,\n    email_domain: $input.first().json.email.split('@')[1],\n    lost_revenue: $input.first().json.tool_data?.lostRevenue || 0,\n    industry: $input.first().json.tool_data?.industry || 'Unknown',\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: eventData }];"
+      },
+      "id": "mixpanel-event",
+      "name": "Prepare Mixpanel Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.mixpanel.com/track",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Basic {{ Buffer.from($vars.MIXPANEL_TOKEN + ':').toString('base64') }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "event",
+              "value": "={{ $json.event }}"
+            },
+            {
+              "name": "properties",
+              "value": "={{ $json.properties }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mixpanel-track",
+      "name": "Track Mixpanel Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "tool-type-check",
+              "leftValue": "={{ $json.tool_type }}",
+              "rightValue": "missed_call_calculator",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "tool-type-router",
+      "name": "Route by Tool Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $vars.SENDER_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Your Missed Call ROI Report is Ready 📊",
+        "message": "Hi {{ $json.name || 'there' }},\n\nThank you for using our Missed Call ROI Calculator! Your personalized report is ready.\n\n📊 **Your Results:**\n• Lost Revenue: £{{ $json.tool_data.lostRevenue.toLocaleString() }}\n• Missed Calls: {{ $json.tool_data.missedCallsPerYear }} per year\n• Industry: {{ $json.tool_data.industry }}\n\n🎯 **Next Steps:**\n1. Download your detailed PDF report (attached)\n2. Book a 15-minute demo to see how we can help\n3. Start your free trial (no credit card required)\n\n**Book Demo:** https://callwaitingai.dev/contact\n**Start Trial:** https://callwaitingai.dev/signup\n\nBest regards,\nPeter Ntaji\nCEO, CallWaitingAI\n\n---\nThis email was sent because you requested a report from our free tools. You can unsubscribe at any time: https://callwaitingai.dev/unsubscribe?email={{ $json.email }}",
+        "options": {
+          "attachments": "={{ $json.tool_data }}"
+        }
+      },
+      "id": "email-day-1",
+      "name": "Day 1: ROI Report Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [2440, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $vars.SENDER_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "How {{ $json.tool_data.industry }} businesses capture £148k in lost calls",
+        "message": "Hi {{ $json.name || 'there' }},\n\nI hope you found your ROI report helpful! I wanted to share how businesses in your industry are solving the missed call problem.\n\n🏆 **Real Results from {{ $json.tool_data.industry }}:**\n• 95% call capture rate (vs 70% industry average)\n• £148,000 additional revenue per year\n• 15+ hours saved per week\n• 99.9% uptime guarantee\n\n🔧 **How It Works:**\n1. AI answers every call in 0.8 seconds\n2. Qualifies leads with smart questions\n3. Books appointments directly in your calendar\n4. Sends you summaries via SMS/email\n\n**See it in action:** https://callwaitingai.dev/demo\n**Start free trial:** https://callwaitingai.dev/signup\n\nQuestions? Reply to this email or call 020 1234 5678\n\nBest regards,\nPeter Ntaji\nCEO, CallWaitingAI\n\n---\nThis email was sent because you requested a report from our free tools. You can unsubscribe at any time: https://callwaitingai.dev/unsubscribe?email={{ $json.email }}",
+        "options": {}
+      },
+      "id": "email-day-3",
+      "name": "Day 3: Product Education",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [2440, 400],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $vars.SENDER_EMAIL }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Still losing £{{ Math.round($json.tool_data.lostRevenue / 12) }} per month? 😬",
+        "message": "Hi {{ $json.name || 'there' }},\n\nI noticed you calculated that you're losing £{{ $json.tool_data.lostRevenue.toLocaleString() }} per year to missed calls. That's £{{ Math.round($json.tool_data.lostRevenue / 12) }} every single month!\n\n😱 **The Cost of Waiting:**\n• Every day = £{{ Math.round($json.tool_data.lostRevenue / 365) }} lost\n• Every week = £{{ Math.round($json.tool_data.lostRevenue / 52) }} lost\n• Every month = £{{ Math.round($json.tool_data.lostRevenue / 12) }} lost\n\n🚀 **What if you could capture 95% of those calls for £119/month?**\n\nThat's a {{ Math.round((($json.tool_data.lostRevenue * 0.95) - 1428) / 1428 * 100) }}% ROI in the first year alone.\n\n**Stop losing money. Start today:**\n→ https://callwaitingai.dev/signup\n\n**Questions?** Reply to this email or call 020 1234 5678\n\nBest regards,\nPeter Ntaji\nCEO, CallWaitingAI\n\n---\nThis email was sent because you requested a report from our free tools. You can unsubscribe at any time: https://callwaitingai.dev/unsubscribe?email={{ $json.email }}",
+        "options": {}
+      },
+      "id": "email-day-7",
+      "name": "Day 7: Urgency CTA",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [2440, 600],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-credentials",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Thank you! Your report will be sent shortly.\" } }}",
+        "options": {}
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"GDPR consent is required to process your request.\" } }}",
+        "options": {}
+      },
+      "id": "gdpr-error",
+      "name": "GDPR Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Invalid email address provided.\" } }}",
+        "options": {}
+      },
+      "id": "email-error",
+      "name": "Email Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"reCAPTCHA verification failed.\" } }}",
+        "options": {}
+      },
+      "id": "recaptcha-error",
+      "name": "reCAPTCHA Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Rate limit exceeded. Please try again later.\" } }}",
+        "options": {}
+      },
+      "id": "rate-limit-error",
+      "name": "Rate Limit Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"error\": \"Failed to process your request. Please try again.\" } }}",
+        "options": {}
+      },
+      "id": "general-error",
+      "name": "General Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2660, 500]
+    }
+  ],
+  "connections": {
+    "Tool Submission Webhook": {
+      "main": [
+        [
+          {
+            "node": "GDPR Consent Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GDPR Consent Check": {
+      "main": [
+        [
+          {
+            "node": "Email Validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GDPR Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Validation": {
+      "main": [
+        [
+          {
+            "node": "reCAPTCHA Verification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reCAPTCHA Verification": {
+      "main": [
+        [
+          {
+            "node": "reCAPTCHA Success Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "reCAPTCHA Success Check": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "reCAPTCHA Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Insert Lead to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rate Limit Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Lead to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Prepare Mixpanel Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Mixpanel Event": {
+      "main": [
+        [
+          {
+            "node": "Track Mixpanel Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Mixpanel Event": {
+      "main": [
+        [
+          {
+            "node": "Route by Tool Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Tool Type": {
+      "main": [
+        [
+          {
+            "node": "Day 1: ROI Report Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Day 1: ROI Report Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Day 1: ROI Report Email": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-18T23:30:00.000Z",
+  "versionId": "1"
+}

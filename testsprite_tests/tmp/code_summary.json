@@ -1,0 +1,123 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js 14",
+    "React 18",
+    "Tailwind CSS",
+    "Supabase",
+    "Twilio",
+    "Groq SDK",
+    "Deepgram",
+    "Flutterwave",
+    "OpenAI",
+    "Lucide React",
+    "n8n"
+  ],
+  "features": [
+    {
+      "name": "Landing Page",
+      "description": "Main marketing landing page with hero section, pricing, and conversion elements",
+      "files": ["app/page.tsx", "app/layout.tsx", "app/globals.css", "components/PricingSection.tsx"]
+    },
+    {
+      "name": "Authentication System",
+      "description": "User authentication with signup, login, password reset, and session management",
+      "files": ["app/login/page.tsx", "app/signup/page.tsx", "app/forgot-password/page.tsx", "app/auth/reset-password/page.tsx", "lib/auth-helpers.ts", "lib/supabase-client.ts", "lib/supabase-server.ts", "middleware.ts"]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Main user dashboard with navigation and various management sections",
+      "files": ["app/dashboard/layout.tsx", "app/dashboard/page.tsx", "components/TrialStatusBanner.tsx", "components/UsageQuota.tsx"]
+    },
+    {
+      "name": "Agent Management",
+      "description": "AI agent creation, configuration, and management system",
+      "files": ["app/dashboard/agents/page.tsx", "app/create-agent/page.tsx", "components/CreateAgentModal.tsx", "components/CallAgentButton.tsx", "components/VoiceChat.tsx", "app/api/create-agent/route.ts", "app/api/agents/[id]/configure-llm/route.ts", "app/api/agents/[id]/configure-tts/route.ts"]
+    },
+    {
+      "name": "Call Management",
+      "description": "Phone call handling, inbound calls, call status tracking, and speech processing",
+      "files": ["app/dashboard/calls/page.tsx", "app/dashboard/phone/page.tsx", "app/api/call/inbound/route.ts", "app/api/call/process-speech/route.ts", "app/api/call/complete/route.ts", "app/api/call/check-trial/route.ts", "app/api/twilio/call-status/route.ts", "app/api/twilio/transcript/route.ts"]
+    },
+    {
+      "name": "Lead Management",
+      "description": "Lead capture, extraction, and delivery system",
+      "files": ["app/dashboard/leads/page.tsx", "app/api/leads/extract/route.ts", "app/api/leads/deliver/route.ts"]
+    },
+    {
+      "name": "Payment System",
+      "description": "Payment processing with Flutterwave integration and billing management",
+      "files": ["app/dashboard/payments/page.tsx", "app/dashboard/billing/page.tsx", "app/dashboard/upgrade/page.tsx", "app/api/create-payment-link/route.ts", "app/api/flutterwave-webhook/route.ts", "lib/flutterwave.ts"]
+    },
+    {
+      "name": "TTS/Voice Generation",
+      "description": "Text-to-speech generation and voice management",
+      "files": ["app/api/generate-voice/route.ts", "app/api/tts/voices/route.ts", "app/api/tts/test-voice/route.ts", "lib/services/tts/odiadev.ts", "lib/odiadev-tts.ts"]
+    },
+    {
+      "name": "Chat Widget",
+      "description": "Floating chat widget with voice and text capabilities",
+      "files": ["components/ChatWidget.tsx", "app/api/chat/widget/route.ts", "lib/groq-chat-widget.ts", "components/support/float-chat.tsx"]
+    },
+    {
+      "name": "LLM Integration",
+      "description": "Large Language Model integration with Groq SDK",
+      "files": ["lib/services/llm/groq.ts"]
+    },
+    {
+      "name": "Speech-to-Text",
+      "description": "Speech recognition and transcription services",
+      "files": ["lib/services/stt/deepgram.ts"]
+    },
+    {
+      "name": "Agent Orchestration",
+      "description": "Core agent orchestration and conversation management",
+      "files": ["lib/services/agent-orchestrator.ts", "lib/services/conversation-manager.ts"]
+    },
+    {
+      "name": "Free Trial System",
+      "description": "Free trial management and usage tracking",
+      "files": ["app/api/trial/status/route.ts", "app/api/trial/record-usage/route.ts", "lib/free-trial.ts", "lib/usage.ts"]
+    },
+    {
+      "name": "WhatsApp Integration",
+      "description": "WhatsApp messaging capabilities",
+      "files": ["app/api/whatsapp/send/route.ts"]
+    },
+    {
+      "name": "Support System",
+      "description": "Customer support and assistant functionality",
+      "files": ["app/api/support/assistant/route.ts"]
+    },
+    {
+      "name": "Data Export",
+      "description": "Data export utilities for CSV and JSON formats",
+      "files": ["lib/exportData.ts"]
+    },
+    {
+      "name": "Test Mode",
+      "description": "Testing and development mode functionality",
+      "files": ["lib/test-mode.ts", "components/TestAdminPanel.tsx"]
+    },
+    {
+      "name": "Health Monitoring",
+      "description": "API health checks and monitoring",
+      "files": ["app/api/health/route.ts", "app/api/usage-report/route.ts"]
+    },
+    {
+      "name": "Static Pages",
+      "description": "Static content pages for legal and informational content",
+      "files": ["app/contact/page.tsx", "app/privacy/page.tsx", "app/terms/page.tsx", "app/success/page.tsx"]
+    },
+    {
+      "name": "UI Components",
+      "description": "Reusable UI components and utilities",
+      "files": ["components/LoadingSkeleton.tsx", "components/ErrorBoundary.tsx", "components/Logo.tsx", "components/QuickAgentTest.tsx", "hooks/useChat.ts"]
+    },
+    {
+      "name": "Configuration",
+      "description": "Application configuration and environment setup",
+      "files": ["next.config.js", "tailwind.config.ts", "tsconfig.json", "vercel.json", "package.json"]
+    }
+  ]
+}

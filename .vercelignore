@@ -1,0 +1,10 @@
+# Ignore build artifacts
+node_modules/
+
+# Ignore local files
+.env.local
+.env*.local
+
+# Ignore IDE files
+.vscode/
+.idea/
